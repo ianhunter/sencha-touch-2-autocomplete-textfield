@@ -42,7 +42,11 @@ Ext.define('Ext.AutocompleteField', {
 		this.resultsStore = Ext.create('Ext.data.Store', {
 			model: 'AutocompleteResult',
 			config: {
-				autoLoad: true
+				autoLoad: false,
+				proxy: {
+		            type: 'localstorage',
+		            id: 'autoCompleteLocalData'
+		        }
 			}
 		});
 
@@ -52,7 +56,9 @@ Ext.define('Ext.AutocompleteField', {
 			renderTo: this.getComponent().element.dom,
 			store: that.resultsStore,
 			margin: 2,
-			itemTpl: '{name}'
+			itemTpl: '<div style="font-size: 14px;">{name}</div>',
+			height: 90,
+			hidden: true
 		});
 
 		var blurTimeout = false;
@@ -66,23 +72,25 @@ Ext.define('Ext.AutocompleteField', {
 
 			if (that.isSelectedItem || that.getComponent().getValue() == '') return;
 			
+			var store = that.resultsStore;
+			store.getProxy().clear();
+			store.data.clear();
+			store.sync();
+
 			searchTimeout = setTimeout(function() {
 				var service = new google.maps.places.AutocompleteService();
 	  			service.getQueryPredictions({ input: that.getComponent().getValue() }, callback);
 
 	  			function callback(predictions, status) {
-				  if (status != google.maps.places.PlacesServiceStatus.OK) {
-				    return;
-				  }
-				  console.log('fire!--------------------');
-				  var tempdata = [];
-				  for (var i = 0, prediction; prediction = predictions[i]; i++) {
-				      that.resultsStore.add({name: prediction.description});
-				      console.log(that.resultsStore);
-				  }
-				  that.resultsStore.load();
+					if (status != google.maps.places.PlacesServiceStatus.OK) {
+					    return;
+					}
+					for (var i = 0; i < predictions.length && i < 2; i++) {
+					    that.resultsStore.insert(i, {name: predictions[i].description});
+					}
+					that.resultsList.show('fade');
 				}
-			}, 300);
+			}, 1000);
 		};
 
 		this.resultsList.on('itemtouchend', function() {
@@ -96,7 +104,7 @@ Ext.define('Ext.AutocompleteField', {
 			that.isSelectedItem = true;
 
 			blurTimeout = setTimeout(function() {
-				that.resultsList.setHeight(0);
+				that.resultsList.hide('fadeOut');
 			}, 500);
 		});
 
@@ -110,7 +118,7 @@ Ext.define('Ext.AutocompleteField', {
 			if (searchTimeout) clearTimeout(searchTimeout);
 
 			blurTimeout = setTimeout(function() {
-				that.resultsList.setHeight(0);
+				that.resultsList.hide('fadeOut');
 			}, 500);
 		});
 
