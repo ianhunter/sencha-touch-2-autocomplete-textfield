@@ -1,6 +1,8 @@
 Sencha Touch 2 Autocomplete Textfield
 =====================================
 
+Original documentation below. This version has been modified to suggest locations (powered by the Google places Javascript API). 
+
 Usage
 -----
 
