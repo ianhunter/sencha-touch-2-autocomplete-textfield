@@ -25,8 +25,8 @@ Ext.define('Ext.AutocompleteField', {
 	initialize: function() {
 		var that = this;
 
-		if (!that.config.config.proxy || !that.config.config.proxy.url || !that.config.config.needleKey) throw new Error('Proxy and needleKey must be set with autocomplete config.');
-		if (!that.config.config.labelKey) throw new Error('LabelKey must be defined with autocomplete config.');
+		//if (!that.config.config.proxy || !that.config.config.proxy.url || !that.config.config.needleKey) throw new Error('Proxy and needleKey must be set with autocomplete config.');
+		//if (!that.config.config.labelKey) throw new Error('LabelKey must be defined with autocomplete config.');
 
 		if (!that.config.config.resultsHeight) that.config.config.resultsHeight = 200;
 
@@ -42,11 +42,11 @@ Ext.define('Ext.AutocompleteField', {
 		this.resultsStore = Ext.create('Ext.data.Store', {
 			model: 'AutocompleteResult',
 			config: {
-				autoLoad: false
+				autoLoad: true
 			}
 		});
 
-		this.resultsStore.setProxy(that.config.config.proxy);
+		//this.resultsStore.setProxy('localhost');
 
 		this.resultsList = Ext.create('Ext.List', {
 			renderTo: this.getComponent().element.dom,
@@ -58,18 +58,30 @@ Ext.define('Ext.AutocompleteField', {
 		var blurTimeout = false;
 		var searchTimeout = false;
 
+		var geocoder = new google.maps.Geocoder();
+
 		var doSearchWithTimeout = function() {
 			if (blurTimeout) clearTimeout(blurTimeout);
 			if (searchTimeout) clearTimeout(searchTimeout);
 
 			if (that.isSelectedItem || that.getComponent().getValue() == '') return;
-
+			
 			searchTimeout = setTimeout(function() {
-				var uriString = that.config.config.proxy.url + (that.config.config.proxy.url.indexOf('?') ? '&' : '?') + encodeURIComponent(that.config.config.needleKey) + '=' + encodeURIComponent(that.getValue(true));
-				that.resultsStore.getProxy().setUrl(uriString);
-				that.isSelectedItem = false;
-				that.resultsStore.load();
-				that.resultsList.setHeight(that.config.config.resultsHeight);
+				var service = new google.maps.places.AutocompleteService();
+	  			service.getQueryPredictions({ input: that.getComponent().getValue() }, callback);
+
+	  			function callback(predictions, status) {
+				  if (status != google.maps.places.PlacesServiceStatus.OK) {
+				    return;
+				  }
+				  console.log('fire!--------------------');
+				  var tempdata = [];
+				  for (var i = 0, prediction; prediction = predictions[i]; i++) {
+				      that.resultsStore.add({name: prediction.description});
+				      console.log(that.resultsStore);
+				  }
+				  that.resultsStore.load();
+				}
 			}, 300);
 		};
 
